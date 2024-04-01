@@ -1,0 +1,25 @@
+.notification {
+    background-color: lightgrey;
+    color: green;
+    width: 50%;
+    height: 2em;
+    font-size: 1.5em;
+    border: 3px solid green;
+    margin-bottom: 5px;
+    align-items: center;
+    display: flex;
+    padding: 0.25em;
+}
+
+.errormessage {
+    background-color: lightgrey;
+    color: red;
+    width: 50%;
+    height: 2em;
+    font-size: 1.5em;
+    border: 3px solid red;
+    margin-bottom: 5px;
+    align-items: center;
+    display: flex;
+    padding: 0.25em;
+}
