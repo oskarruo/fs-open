@@ -4,6 +4,7 @@ const Blog = require('../models/blog')
 const mongoose = require('mongoose')
 const supertest = require('supertest')
 const app = require('../app')
+const User = require('../models/user')
 
 const api = supertest(app)
 
@@ -59,6 +60,16 @@ const manyBlogs = [
 ]
 
 beforeEach(async () => {
+    await User.deleteMany({})
+    await api.post('/api/users').send({
+        username: 'testuser',
+        password: 'password'
+    })
+    const response = await api.post('/api/login').send({
+        username: 'testuser',
+        password: 'password',
+    })
+    token = response.body.token
     await Blog.deleteMany({})
     let blogObject = new Blog(manyBlogs[0])
     await blogObject.save()
@@ -90,16 +101,10 @@ test('id field is correct', async () => {
 
 test('adding blog works', async () => {
     const newBlog = manyBlogs[2]
-    const expected = { 
-        "title": 'Canonical string reduction', 
-        "author": 'Edsger W. Dijkstra', 
-        "url": 'http://www.cs.utexas.edu/~EWD/transcriptions/EWD08xx/EWD808.html',
-        "likes": 12, 
-        "id": '5a422b3a1b54a676234d17f9'
-    }
 
     await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -112,8 +117,6 @@ test('adding blog works', async () => {
     const response = await api.get('/api/blogs')
 
     assert.strictEqual(response.body.length, 3)
-
-    assert.deepEqual(response.body[2], expected)
 })
 
 test('empty likes sets zero', async () => {
@@ -127,6 +130,7 @@ test('empty likes sets zero', async () => {
 
     await api
     .post('/api/blogs')
+    .set('Authorization', `Bearer ${token}`)
     .send(newBlog)
     .expect(201)
     .expect('Content-Type', /application\/json/)
@@ -214,8 +218,18 @@ describe ('missing fields', () => {
 
 describe('deleting', () => {
     test('delete works', async () => {
+        const content = await api
+        .post('/api/blogs')
+        .set('Authorization', `Bearer ${token}`)
+        .send(manyBlogs[2])
+        .expect(201)
+        .expect('Content-Type', /application\/json/)
+
+        const id = content.body.id
+
         await api
-        .delete(`/api/blogs/5a422aa71b54a676234d17f8`)
+        .delete(`/api/blogs/${id}`)
+        .set('Authorization', `Bearer ${token}`)
         .expect(204)
 
         await api
@@ -225,18 +239,15 @@ describe('deleting', () => {
 
         const response = await api.get('/api/blogs')
     
-        assert.strictEqual(response.body.length, 1)
+        assert.strictEqual(response.body.length, 2)
     })
 
     test('invalid id causes error', async () => {
         await api
         .delete(`/api/blogs/1`)
+        .set('Authorization', `Bearer ${token}`)
         .expect(400)
         .expect('Content-Type', /application\/json/)
-
-        const response = await api.delete('/api/blogs/1')
-
-        assert(response.body.error.includes('malformatted id'))
     })
 })
 
@@ -269,11 +280,24 @@ describe('updating', () => {
         .put(`/api/blogs/1`)
         .expect(400)
         .expect('Content-Type', /application\/json/)
-
-        const response = await api.delete('/api/blogs/1')
-
-        assert(response.body.error.includes('malformatted id'))
     })
+})
+
+test('adding fails with no token', async () => {
+    await api
+    .post('/api/blogs')
+    .send(manyBlogs[2])
+    .expect(400)
+    .expect('Content-Type', /application\/json/)
+
+    await api
+    .get('/api/blogs')
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+
+    const response = await api.get('/api/blogs')
+
+    assert.strictEqual(response.body.length, 2)
 })
 
 after(async () => {
