@@ -46,7 +46,7 @@ const Blog = ({ id, blog, handleLike, handleDelete, user }) => {
       </div>
     )}
   return (
-    <div style={blogStyle} className='blog'>
+    <div style={blogStyle} className='blog' data-testid='blog'>
       {blog.title} {blog.author}
       <button onClick={handleExpanded}>view</button>
     </div>
